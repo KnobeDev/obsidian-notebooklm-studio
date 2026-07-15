@@ -77,7 +77,7 @@ function chunkSource(source: string, maxChars = 60_000): string[] {
   return chunks;
 }
 
-async function validateArtifactFile(filename: string, extension: string, expectedSize: number, expectedHash: string): Promise<void> {
+export async function validateArtifactFile(filename: string, extension: string, expectedSize: number, expectedHash: string): Promise<void> {
   const stat = await fs.lstat(filename);
   if (!stat.isFile() || stat.isSymbolicLink() || stat.size !== expectedSize || stat.size > 2 * 1024 ** 3) {
     throw new Error("NotebookLM companion artifact has an invalid type or size.");
@@ -90,7 +90,7 @@ async function validateArtifactFile(filename: string, extension: string, expecte
   if (extension === ".png" && !header.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) throw new Error("Downloaded infographic is not a PNG file.");
   if (extension === ".mp4" && header.subarray(4, 8).toString("ascii") !== "ftyp") throw new Error("Downloaded video is not an MP4 file.");
   if (extension === ".pptx" && header.subarray(0, 2).toString("ascii") !== "PK") throw new Error("Downloaded slide deck is not a PPTX file.");
-  if (extension === ".mp3" && header.subarray(0, 3).toString("ascii") !== "ID3" && !(header[0] === 0xff && (header[1] & 0xe0) === 0xe0)) throw new Error("Downloaded audio is not an MP3 file.");
+  if (extension === ".m4a" && header.subarray(4, 8).toString("ascii") !== "ftyp") throw new Error("Downloaded audio is not an M4A (MPEG-4) file.");
   if ([".md", ".csv", ".json"].includes(extension) && header.includes(0)) throw new Error("Downloaded text artifact contains binary data.");
   if (extension === ".json") JSON.parse(await fs.readFile(filename, "utf8"));
 }
