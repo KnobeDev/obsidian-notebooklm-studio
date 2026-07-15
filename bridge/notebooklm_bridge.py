@@ -9,17 +9,39 @@ import os
 import signal
 import subprocess
 import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
 PROTOCOL_VERSION = 1
 VERSION = "0.1.0"
 KINDS = ("audio", "video", "slide-deck", "infographic", "quiz", "flashcards", "report", "data-table", "mind-map")
+GENERATE_TIMEOUTS = {"audio": 1200, "video": 1800, "slide-deck": 1200, "infographic": 900}
+DEFAULT_GENERATE_TIMEOUT = 300
+GENERATE_ATTEMPTS = 3  # one initial attempt plus --retry 2
+DEFAULT_CLI_TIMEOUT = 1900
+HEARTBEAT_SECONDS = 30
 ACTIVE_PROCESS: subprocess.Popen[str] | None = None
+EMIT_LOCK = threading.Lock()
 
 
 def emit(request_id: str, event_type: str, **payload: Any) -> None:
-    print(json.dumps({"protocolVersion": PROTOCOL_VERSION, "requestId": request_id, "type": event_type, **payload}), flush=True)
+    with EMIT_LOCK:
+        print(json.dumps({"protocolVersion": PROTOCOL_VERSION, "requestId": request_id, "type": event_type, **payload}), flush=True)
+
+
+def generate_timeout(kind: str) -> int:
+    return GENERATE_TIMEOUTS.get(kind, DEFAULT_GENERATE_TIMEOUT)
+
+
+def heartbeat_loop(request_id: str, message: str, stop: threading.Event) -> None:
+    started = time.monotonic()
+    while not stop.wait(HEARTBEAT_SECONDS):
+        if stop.is_set():
+            return
+        elapsed = int(time.monotonic() - started)
+        emit(request_id, "progress", stage="waiting", message=f"{message} - {elapsed // 60}m {elapsed % 60:02d}s elapsed, still waiting on NotebookLM")
 
 
 def validate_request(request: dict[str, Any]) -> None:
@@ -37,8 +59,7 @@ def build_generate_args(kind: str, notebook_id: str, prompt_path: str, language:
     if kind == "mind-map":
         instructions = Path(prompt_path).read_text(encoding="utf-8")
         return ["generate", kind, "--kind", "interactive", "--instructions", instructions, "--language", language, *common]
-    timeout = "1200" if kind == "audio" else "1800" if kind == "video" else "300"
-    args = ["generate", kind, "--prompt-file", prompt_path, "--wait", "--timeout", timeout, "--retry", "2", *common]
+    args = ["generate", kind, "--prompt-file", prompt_path, "--wait", "--timeout", str(generate_timeout(kind)), "--retry", "2", *common]
     if kind not in {"quiz", "flashcards"}:
         args.extend(["--language", language])
     if kind == "slide-deck":
@@ -96,7 +117,7 @@ def handle_termination(_signum: int, _frame: Any) -> None:
     raise InterruptedError("Generation was cancelled.")
 
 
-def run_cli(profile: str, args: list[str]) -> dict[str, Any]:
+def run_cli(profile: str, args: list[str], request_id: str = "", heartbeat: str = "", timeout_seconds: int = DEFAULT_CLI_TIMEOUT) -> dict[str, Any]:
     global ACTIVE_PROCESS
     prefix = ["notebooklm"]
     if profile and profile != "default":
@@ -111,8 +132,11 @@ def run_cli(profile: str, args: list[str]) -> dict[str, Any]:
         start_new_session=os.name == "posix",
         creationflags=creationflags,
     )
+    stop_heartbeat = threading.Event()
+    if request_id and heartbeat:
+        threading.Thread(target=heartbeat_loop, args=(request_id, heartbeat, stop_heartbeat), daemon=True).start()
     try:
-        stdout, _stderr = ACTIVE_PROCESS.communicate(timeout=1900)
+        stdout, _stderr = ACTIVE_PROCESS.communicate(timeout=timeout_seconds)
         if ACTIVE_PROCESS.returncode != 0:
             raise RuntimeError("notebooklm-py could not complete the operation. Run 'notebooklm auth check --test --json' in a terminal for safe diagnostics.")
         return parse_json(stdout)
@@ -120,6 +144,7 @@ def run_cli(profile: str, args: list[str]) -> dict[str, Any]:
         terminate_active_process()
         raise RuntimeError("notebooklm-py timed out before the operation completed.") from exc
     finally:
+        stop_heartbeat.set()
         ACTIVE_PROCESS = None
 
 
@@ -193,16 +218,29 @@ def main() -> int:
             source = run_cli(profile, ["source", "add", str(bundle), "--type", "file", "-n", notebook_id, "--json"])
             source_id = extract_id(source, "source_id", "id")
             emit(request_id, "progress", stage="indexing", message=f"Waiting for simplified source {bundle_index} of {len(bundles)} to finish indexing")
-            run_cli(profile, ["source", "wait", source_id, "-n", notebook_id, "--timeout", "600", "--json"])
+            run_cli(
+                profile,
+                ["source", "wait", source_id, "-n", notebook_id, "--timeout", "600", "--json"],
+                request_id,
+                f"Still indexing simplified source {bundle_index} of {len(bundles)}",
+                720,
+            )
 
         artifacts = request.get("artifacts", [])
         for index, artifact in enumerate(artifacts, start=1):
             kind = artifact["kind"]
             emit(request_id, "progress", stage="generating", message=f"Generating {artifact['label']}", current=index, total=len(artifacts))
-            generated = run_cli(profile, build_generate_args(kind, notebook_id, str(prompt_path), request.get("language", "en")))
+            generated = run_cli(
+                profile,
+                build_generate_args(kind, notebook_id, str(prompt_path), request.get("language", "en")),
+                request_id,
+                f"Still generating {artifact['label']}",
+                GENERATE_ATTEMPTS * generate_timeout(kind) + 120,
+            )
             artifact_id = extract_id(generated, "artifact_id", "task_id", "id", "note_id")
             target = safe_output(request["outputDir"], artifact["filename"])
-            run_cli(profile, download_args(kind, notebook_id, artifact_id, target))
+            emit(request_id, "progress", stage="downloading", message=f"Downloading {artifact['label']}", current=index, total=len(artifacts))
+            run_cli(profile, download_args(kind, notebook_id, artifact_id, target), request_id, f"Still downloading {artifact['label']}")
             digest = hashlib.sha256(target.read_bytes()).hexdigest()
             emit(request_id, "artifact_ready", artifact={"kind": kind, "relativePath": target.name, "size": target.stat().st_size, "sha256": digest})
 
