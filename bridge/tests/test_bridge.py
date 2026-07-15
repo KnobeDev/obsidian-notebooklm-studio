@@ -9,7 +9,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import notebooklm_bridge as bridge
-from notebooklm_bridge import build_generate_args, validate_request
+from notebooklm_bridge import build_generate_args, download_args, validate_request
 
 
 class BridgeTests(unittest.TestCase):
@@ -34,6 +34,20 @@ class BridgeTests(unittest.TestCase):
     def test_slide_deck_generation_gets_a_media_scale_timeout(self):
         args = build_generate_args("slide-deck", "nb", str(Path(__file__)), "en")
         self.assertIn("1200", args)
+
+    def test_audio_downloads_as_is_without_a_format_flag(self):
+        # NotebookLM returns audio as an M4A/MPEG-4 container and the CLI has no
+        # audio --format flag, so the download must preserve the .m4a path verbatim.
+        target = Path("/tmp/staging/Topic-audio-overview.m4a")
+        args = download_args("audio", "nb", "artifact-1", target)
+        self.assertEqual(args[:3], ["download", "audio", str(target)])
+        self.assertNotIn("--format", args)
+        self.assertTrue(str(target).endswith(".m4a"))
+
+    def test_slide_deck_download_keeps_its_pptx_format_flag(self):
+        args = download_args("slide-deck", "nb", "artifact-1", Path("/tmp/staging/deck.pptx"))
+        self.assertIn("--format", args)
+        self.assertIn("pptx", args)
 
     def test_run_cli_emits_heartbeats_while_the_cli_is_busy(self):
         class SlowProcess:

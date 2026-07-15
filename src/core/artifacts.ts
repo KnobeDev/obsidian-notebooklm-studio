@@ -14,7 +14,7 @@ export interface ArtifactDefinition {
 }
 
 export const ARTIFACT_DEFINITIONS: readonly ArtifactDefinition[] = [
-  { kind: "audio", label: "Audio overview", suffix: "audio-overview", extension: ".mp3", mime: "audio/mpeg", hint: "MP3 podcast" },
+  { kind: "audio", label: "Audio overview", suffix: "audio-overview", extension: ".m4a", mime: "audio/mp4", hint: "M4A podcast" },
   { kind: "video", label: "Video overview", suffix: "video-overview", extension: ".mp4", mime: "video/mp4", hint: "MP4 explainer" },
   { kind: "slide-deck", label: "Slide deck", suffix: "slides", extension: ".pptx", mime: "application/vnd.openxmlformats-officedocument.presentationml.presentation", hint: "Editable PPTX" },
   { kind: "infographic", label: "Infographic", suffix: "infographic", extension: ".png", mime: "image/png", hint: "PNG image" },
