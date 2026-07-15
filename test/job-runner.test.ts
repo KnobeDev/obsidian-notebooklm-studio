@@ -36,6 +36,7 @@ describe("runGeneration preflight", () => {
       .rejects.toThrow(/notebooklm command was not found/);
 
     expect(onProgress).toHaveBeenCalledWith("Checking the NotebookLM companion and authentication");
+    expect(onProgress).not.toHaveBeenCalledWith("NotebookLM companion and authentication check passed");
     expect(runBridge).toHaveBeenCalledTimes(1);
     expect(runBridge).toHaveBeenCalledWith(
       expect.stringMatching(/^python3?$/),
@@ -47,14 +48,17 @@ describe("runGeneration preflight", () => {
     expect(curateContent).not.toHaveBeenCalled();
   });
 
-  test("runs the companion preflight before the first curation call", async () => {
+  test("confirms preflight success and runs it before the first curation call", async () => {
     const { app, target } = fakeVault();
+    const onProgress = vi.fn();
     const signal = new AbortController().signal;
     vi.mocked(runBridge).mockResolvedValue({ notebookId: "", keptRemoteNotebook: true, artifacts: [] });
     vi.mocked(curateContent).mockRejectedValue(new Error("curation halted by test"));
 
-    await expect(runGeneration(app, target, options, DEFAULT_SETTINGS, "/plugin/bridge.py", signal, vi.fn()))
+    await expect(runGeneration(app, target, options, DEFAULT_SETTINGS, "/plugin/bridge.py", signal, onProgress))
       .rejects.toThrow("curation halted by test");
+
+    expect(onProgress).toHaveBeenCalledWith("NotebookLM companion and authentication check passed");
 
     expect(runBridge).toHaveBeenCalledTimes(1);
     expect(curateContent).toHaveBeenCalledTimes(1);

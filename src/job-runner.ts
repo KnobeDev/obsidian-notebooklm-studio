@@ -68,6 +68,7 @@ async function preflightCompanion(
       if (event.type === "progress") onProgress(event.message);
     }
   );
+  onProgress("NotebookLM companion and authentication check passed");
 }
 
 function chunkSource(source: string, maxChars = 60_000): string[] {
