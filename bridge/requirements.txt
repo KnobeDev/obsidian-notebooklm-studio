@@ -1,0 +1,3 @@
+# Tested companion version. notebooklm-py relies on undocumented Google APIs;
+# update this pin only after running the Python bridge and live opt-in smoke tests.
+notebooklm-py[browser]==0.7.3

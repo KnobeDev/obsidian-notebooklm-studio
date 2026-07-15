@@ -1,0 +1,9 @@
+node_modules/
+coverage/
+main.js
+*.log
+.env*
+data.json
+notebooklm-bridge-*.py
+__pycache__/
+*.pyc
