@@ -21,6 +21,8 @@
 .notebooklm-studio-job-log time { color: var(--text-muted); flex: 0 0 auto; font-variant-numeric: tabular-nums; }
 .notebooklm-studio-job-summary, .notebooklm-studio-job-log li { min-width: 0; overflow-wrap: anywhere; }
 .notebooklm-studio-status-bar:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; }
+.notebooklm-studio-auth-status:empty { display: none; }
+.notebooklm-studio-auth-status { color: var(--text-muted); font-size: var(--font-ui-small); margin: .25rem 0 .75rem; min-height: 1.25rem; min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 30rem) { .notebooklm-studio-actions { justify-content: stretch; } .notebooklm-studio-actions button { flex: 1 1 100%; } }
 @media (prefers-reduced-motion: reduce) { .notebooklm-studio-modal * { scroll-behavior: auto !important; transition-duration: .01ms !important; } }
 @media (forced-colors: active) { .notebooklm-studio-disclosure, .notebooklm-studio-error { border: 2px solid CanvasText; } }

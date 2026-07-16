@@ -6,7 +6,7 @@ export const PROTOCOL_VERSION = 1;
 export interface BridgeRequest {
   protocolVersion: 1;
   requestId: string;
-  operation: "generate" | "preflight" | "delete_notebook";
+  operation: "generate" | "preflight" | "login" | "delete_notebook";
   notebookId?: string;
   notebookTitle?: string;
   bundlePaths?: string[];

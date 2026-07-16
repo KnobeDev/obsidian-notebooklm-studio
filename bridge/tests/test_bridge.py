@@ -100,5 +100,80 @@ class BridgeTests(unittest.TestCase):
         self.assertEqual(buffer.getvalue(), "")
 
 
+    def test_accepts_login_operation(self):
+        # Sign-in requests carry no artifacts or notebook id; they must validate.
+        validate_request({"protocolVersion": 1, "requestId": "r", "operation": "login"})
+
+    def test_run_login_prefixes_named_profiles(self):
+        captured = {}
+
+        class LoginProcess:
+            pid = 5555
+            returncode = 0
+
+            def __init__(self, argv):
+                captured["argv"] = argv
+
+            def communicate(self, timeout=None):
+                return ("", "")
+
+            def poll(self):
+                return 0
+
+        original_popen = bridge.subprocess.Popen
+        bridge.subprocess.Popen = lambda argv, **kwargs: LoginProcess(argv)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                bridge.run_login("work", "r1")
+        finally:
+            bridge.subprocess.Popen = original_popen
+        self.assertEqual(captured["argv"], ["notebooklm", "--profile", "work", "login"])
+
+    def test_run_login_omits_prefix_for_default_profile(self):
+        captured = {}
+
+        class LoginProcess:
+            pid = 5555
+            returncode = 0
+
+            def __init__(self, argv):
+                captured["argv"] = argv
+
+            def communicate(self, timeout=None):
+                return ("", "")
+
+            def poll(self):
+                return 0
+
+        original_popen = bridge.subprocess.Popen
+        bridge.subprocess.Popen = lambda argv, **kwargs: LoginProcess(argv)
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                bridge.run_login("default", "r1")
+        finally:
+            bridge.subprocess.Popen = original_popen
+        self.assertEqual(captured["argv"], ["notebooklm", "login"])
+
+    def test_run_login_raises_when_sign_in_fails(self):
+        class FailedLogin:
+            pid = 5555
+            returncode = 1
+
+            def communicate(self, timeout=None):
+                return ("", "boom")
+
+            def poll(self):
+                return 1
+
+        original_popen = bridge.subprocess.Popen
+        bridge.subprocess.Popen = lambda *args, **kwargs: FailedLogin()
+        try:
+            with self.assertRaises(RuntimeError):
+                with contextlib.redirect_stdout(io.StringIO()):
+                    bridge.run_login("default", "r1")
+        finally:
+            bridge.subprocess.Popen = original_popen
+
+
 if __name__ == "__main__":
     unittest.main()

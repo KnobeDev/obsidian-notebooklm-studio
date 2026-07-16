@@ -19,14 +19,14 @@ Selecting Ollama keeps the optional curation step local. It does **not** make No
 ## Prerequisites
 
 1. Install Python 3.10 or later.
-2. Install and authenticate `notebooklm-py` using its current documented flow:
+2. Install `notebooklm-py` and its browser support:
 
    ```bash
    pip install "notebooklm-py[browser]==0.7.3"
    playwright install chromium
-   notebooklm login
-   notebooklm auth check --test --json
    ```
+
+   Then sign in to Google **from the plugin settings**: open **NotebookLM Studio → NotebookLM companion** and click **Sign in to NotebookLM**. It opens your browser, you complete the Google login there, and the session is saved into the local `notebooklm-py` profile named in settings. **Check connection** confirms the profile is authenticated. (The equivalent terminal flow is `notebooklm login` / `notebooklm auth check --test --json`.)
 
 3. For Ollama, run Ollama locally and pull the model configured in the plugin settings.
 4. For a cloud curator, select an existing secret or create one using the Obsidian keychain control in the generation dialog or plugin settings. The plugin stores only the secret name and retrieves the API key through `app.secretStorage` when a job begins.
