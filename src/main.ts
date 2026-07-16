@@ -5,6 +5,7 @@ import { GenerationModal } from "./generation-modal";
 import { JobManager, JOB_STATE_LABELS, formatDuration } from "./core/job-manager";
 import { JobStatusModal } from "./job-status-modal";
 import { materializeCompanion } from "./companion";
+import { connectNotebookLM, checkNotebookLMConnection } from "./auth";
 import { runGeneration, type GenerationResult } from "./job-runner";
 import { NotebookLmStudioSettingTab } from "./settings";
 import { DEFAULT_SETTINGS, migrateStoredSettings, type GenerationOptions, type NotebookLmStudioSettings } from "./types";
@@ -81,6 +82,16 @@ export default class NotebookLmStudioPlugin extends Plugin {
   }
 
   async saveSettings(): Promise<void> { await this.saveData(this.settings); }
+
+  /** Open the browser and sign in to Google NotebookLM for the current profile. */
+  signInToNotebookLM(signal: AbortSignal, onProgress: (message: string) => void): Promise<void> {
+    return connectNotebookLM(this.companionPath, this.settings.notebooklmProfile, signal, onProgress);
+  }
+
+  /** Confirm the companion is installed and the current profile is authenticated. */
+  checkNotebookLMAuth(signal: AbortSignal, onProgress: (message: string) => void): Promise<void> {
+    return checkNotebookLMConnection(this.companionPath, this.settings.notebooklmProfile, signal, onProgress);
+  }
 
   startGenerationJob(target: TAbstractFile, options: GenerationOptions): Promise<GenerationResult> {
     this.lastRun = { targetPath: target.path, options: structuredClone(options) };

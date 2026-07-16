@@ -15,12 +15,15 @@ from pathlib import Path
 from typing import Any
 
 PROTOCOL_VERSION = 1
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 KINDS = ("audio", "video", "slide-deck", "infographic", "quiz", "flashcards", "report", "data-table", "mind-map")
 GENERATE_TIMEOUTS = {"audio": 1200, "video": 1800, "slide-deck": 1200, "infographic": 900}
 DEFAULT_GENERATE_TIMEOUT = 300
 GENERATE_ATTEMPTS = 3  # one initial attempt plus --retry 2
 DEFAULT_CLI_TIMEOUT = 1900
+# Interactive Google sign-in opens a browser and waits on the person, so it gets
+# a much longer ceiling than the automated calls (account picker, 2FA, consent).
+LOGIN_TIMEOUT = 600
 HEARTBEAT_SECONDS = 30
 ACTIVE_PROCESS: subprocess.Popen[str] | None = None
 EMIT_LOCK = threading.Lock()
@@ -47,7 +50,7 @@ def heartbeat_loop(request_id: str, message: str, stop: threading.Event) -> None
 def validate_request(request: dict[str, Any]) -> None:
     if request.get("protocolVersion") != PROTOCOL_VERSION:
         raise ValueError("Unsupported protocol version.")
-    if request.get("operation") not in {"preflight", "generate", "delete_notebook"} or not isinstance(request.get("requestId"), str):
+    if request.get("operation") not in {"preflight", "login", "generate", "delete_notebook"} or not isinstance(request.get("requestId"), str):
         raise ValueError("Invalid bridge request.")
     for artifact in request.get("artifacts", []):
         if artifact.get("kind") not in KINDS:
@@ -148,6 +151,47 @@ def run_cli(profile: str, args: list[str], request_id: str = "", heartbeat: str 
         ACTIVE_PROCESS = None
 
 
+def run_login(profile: str, request_id: str) -> None:
+    """Launch `notebooklm login` — it opens the system browser for Google sign-in
+    and persists the session into the named profile. We do not parse its output;
+    a zero exit code is the whole contract. A heartbeat keeps the plugin informed
+    while the person completes the login in their browser."""
+    global ACTIVE_PROCESS
+    prefix = ["notebooklm"]
+    if profile and profile != "default":
+        prefix.extend(["--profile", profile])
+    creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+    ACTIVE_PROCESS = subprocess.Popen(
+        prefix + ["login"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        shell=False,
+        start_new_session=os.name == "posix",
+        creationflags=creationflags,
+    )
+    stop_heartbeat = threading.Event()
+    threading.Thread(
+        target=heartbeat_loop,
+        args=(request_id, "Waiting for you to finish signing in to Google", stop_heartbeat),
+        daemon=True,
+    ).start()
+    try:
+        _stdout, _stderr = ACTIVE_PROCESS.communicate(timeout=LOGIN_TIMEOUT)
+        if ACTIVE_PROCESS.returncode != 0:
+            raise RuntimeError(
+                "Sign-in did not complete. Finish the Google login in the browser window, then try again."
+            )
+    except subprocess.TimeoutExpired as exc:
+        terminate_active_process()
+        raise RuntimeError(
+            "Sign-in timed out before it finished. Try again and complete the Google login promptly."
+        ) from exc
+    finally:
+        stop_heartbeat.set()
+        ACTIVE_PROCESS = None
+
+
 def safe_output(output_dir: str, filename: str) -> Path:
     if not filename or Path(filename).name != filename or filename in {".", ".."}:
         raise ValueError("Unsafe output filename.")
@@ -187,6 +231,11 @@ def main() -> int:
             raise ValueError("Invalid NotebookLM profile name.")
         if request["operation"] == "preflight":
             run_cli(profile, ["doctor", "--json"])
+            emit(request_id, "complete", notebookId="", keptRemoteNotebook=True)
+            return 0
+        if request["operation"] == "login":
+            emit(request_id, "progress", stage="signin", message="Opening your browser to sign in to Google NotebookLM")
+            run_login(profile, request_id)
             emit(request_id, "complete", notebookId="", keptRemoteNotebook=True)
             return 0
         if request["operation"] == "delete_notebook":

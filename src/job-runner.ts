@@ -48,7 +48,7 @@ async function abortable<T>(promise: Promise<T>, signal: AbortSignal): Promise<T
   });
 }
 
-function pythonExecutable(): string {
+export function pythonExecutable(): string {
   return process.platform === "win32" ? "python" : "python3";
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "obsidian-notebooklm-studio",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Create local NotebookLM artifacts from selected Obsidian notes and folders with optional AI curation.",
   "main": "main.js",
   "type": "module",
