@@ -1,6 +1,6 @@
 {
   "name": "obsidian-notebooklm-studio",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Create local NotebookLM artifacts from selected Obsidian notes and folders with optional AI curation.",
   "main": "main.js",
   "type": "module",
@@ -11,18 +11,25 @@
     "test:coverage": "vitest run --coverage",
     "test:python": "python3 -m unittest discover -s bridge/tests -p 'test_*.py'"
   },
-  "keywords": ["obsidian-plugin", "notebooklm", "ollama", "openai", "anthropic", "gemini"],
+  "keywords": [
+    "obsidian-plugin",
+    "notebooklm",
+    "ollama",
+    "openai",
+    "anthropic",
+    "gemini"
+  ],
   "author": "KnobeDev",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "@vitest/coverage-v8": "^3.2.0",
+    "@vitest/coverage-v8": "^5.0.3",
     "axe-core": "^4.10.0",
     "builtin-modules": "^4.0.0",
-    "esbuild": "^0.25.0",
+    "esbuild": "^0.28.2",
     "jsdom": "^26.0.0",
     "obsidian": "latest",
     "typescript": "^5.8.0",
-    "vitest": "^3.2.0"
+    "vitest": "^5.0.3"
   }
 }

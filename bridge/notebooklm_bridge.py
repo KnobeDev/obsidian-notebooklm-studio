@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 PROTOCOL_VERSION = 1
-VERSION = "0.2.0"
+VERSION = "0.2.1"
 KINDS = ("audio", "video", "slide-deck", "infographic", "quiz", "flashcards", "report", "data-table", "mind-map")
 GENERATE_TIMEOUTS = {"audio": 1200, "video": 1800, "slide-deck": 1200, "infographic": 900}
 DEFAULT_GENERATE_TIMEOUT = 300

@@ -1,8 +1,8 @@
 {
   "id": "notebooklm-studio",
   "name": "NotebookLM Studio",
-  "version": "0.2.0",
-  "minAppVersion": "1.11.4",
+  "version": "0.2.1",
+  "minAppVersion": "1.11.5",
   "description": "Create audio, video, slides, study aids, reports, tables, and mind maps from vault content.",
   "author": "KnobeDev",
   "authorUrl": "https://github.com/KnobeDev",

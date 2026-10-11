@@ -56,7 +56,7 @@ export class NotebookLmStudioSettingTab extends PluginSettingTab {
         .addComponent((element) => new SecretComponent(this.app, element)
           .setValue(this.plugin.settings.secretNames[cloudProvider])
           .onChange(async (value) => {
-            this.plugin.settings.secretNames[cloudProvider] = value;
+            this.plugin.settings.secretNames[cloudProvider] = value ?? "";
             await this.plugin.saveSettings();
           }));
       labelSetting(secretSetting, `notebooklm-studio-${cloudProvider}-secret`);

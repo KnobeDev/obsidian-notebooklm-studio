@@ -18,11 +18,11 @@ Selecting Ollama keeps the optional curation step local. It does **not** make No
 
 ## Prerequisites
 
-1. Install Python 3.10 or later.
+1. Use Obsidian 1.11.5 or later and install Python 3.10 or later.
 2. Install `notebooklm-py` and its browser support:
 
    ```bash
-   pip install "notebooklm-py[browser]==0.7.3"
+   pip install "notebooklm-py[browser]==0.8.4"
    playwright install chromium
    ```
 
@@ -32,6 +32,8 @@ Selecting Ollama keeps the optional curation step local. It does **not** make No
 4. For a cloud curator, select an existing secret or create one using the Obsidian keychain control in the generation dialog or plugin settings. The plugin stores only the secret name and retrieves the API key through `app.secretStorage` when a job begins.
 
 ## Install for development
+
+Use Node.js 24 LTS (or Node.js 22.12+ within the 22.x line) for the build and test tools.
 
 ```bash
 npm install
@@ -52,6 +54,10 @@ The initial release recursively bundles text-oriented Obsidian content: Markdown
 - The TypeScript side validates every companion-reported filename before copying it into the vault.
 - Cancelling terminates the companion and removes its temporary local staging directory. Any already-created remote NotebookLM notebook may remain and can be managed in NotebookLM.
 - By default, the temporary remote notebook is removed after successful downloads (and best-effort cleanup is attempted after failures or cancellation). Enable **Keep remote notebook** if you want it retained in NotebookLM.
+
+## Version 0.2.1 compatibility
+
+This release pins `notebooklm-py` 0.8.4 and requires Obsidian 1.11.5 or later, which encrypts Secret Storage on disk. Cleared keychain selections are normalized for Obsidian 1.14.4 compatibility. Development dependencies have been refreshed to resolve npm audit findings, and test discovery is limited to the primary checkout. The bridge command arguments have been checked against the installed 0.8.4 CLI for all nine artifact types and named profiles. Offline TypeScript and Python tests pass. The release qualification live smoke test stopped at authentication before creating a notebook; live generation remains unverified. Reauthenticate through plugin settings before retrying if your saved session has expired.
 
 ## Development checks
 

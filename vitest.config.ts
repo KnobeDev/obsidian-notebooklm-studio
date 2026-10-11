@@ -6,6 +6,7 @@ export default defineConfig({
     alias: { obsidian: fileURLToPath(new URL("./test/mocks/obsidian.ts", import.meta.url)) }
   },
   test: {
+    include: ["test/**/*.test.ts"],
     environment: "node",
     coverage: {
       provider: "v8",

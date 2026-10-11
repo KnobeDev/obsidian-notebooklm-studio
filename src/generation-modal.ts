@@ -59,9 +59,9 @@ export class GenerationModal extends Modal {
         secretComponent = new SecretComponent(this.app, element)
           .setValue(secretName)
           .onChange(async (value) => {
-            secretName = value;
+            secretName = value ?? "";
             if (provider !== "ollama") {
-              this.plugin.settings.secretNames[provider] = value;
+              this.plugin.settings.secretNames[provider] = value ?? "";
               await this.plugin.saveSettings();
             }
           });
